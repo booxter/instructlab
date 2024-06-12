@@ -4,7 +4,7 @@
 from functools import cache, wraps
 from importlib import resources
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Union
+from typing import Any, List, Mapping, Optional, TypedDict
 import copy
 import glob
 import json
@@ -188,8 +188,14 @@ def get_taxonomy_diff(repo="taxonomy", base="origin/main"):
     return updated_taxonomy_files
 
 
+class SourceDict(TypedDict):
+    repo: str
+    commit: str
+    patterns: List[str]
+
+
 def get_documents(
-    source: Dict[str, Union[str, List[str]]],
+    source: SourceDict,
     skip_checkout: bool = False,
 ) -> List[str]:
     """
@@ -201,8 +207,8 @@ def get_documents(
     Returns:
          List[str]: List of document contents.
     """ ""
-    repo_url = source.get("repo")
-    commit_hash = source.get("commit")
+    repo_url = source.get("repo", "")
+    commit_hash = source.get("commit", "")
     file_patterns = source.get("patterns", [])
     with tempfile.TemporaryDirectory() as temp_dir:
         try:
