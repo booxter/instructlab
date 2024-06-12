@@ -48,3 +48,4 @@ tenacity>=8.3.0,!=8.4.0
 # it is for CLI usage ONLY
 yamllint>=1.35.1
 instructlab-training>=0.0.3
+referencing>=0.35.0,<0.36.0
