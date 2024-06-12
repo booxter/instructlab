@@ -487,7 +487,7 @@ def read_taxonomy_file(file_path: str, yaml_rules: Optional[str] = None):
                         "parsable",
                         "-c",
                         yaml_rules,
-                        file_path,
+                        str(file_path),
                         "-s",
                     ]
                 else:
@@ -498,7 +498,7 @@ def read_taxonomy_file(file_path: str, yaml_rules: Optional[str] = None):
                         "parsable",
                         "-d",
                         DEFAULT_YAML_RULES,
-                        file_path,
+                        str(file_path),
                         "-s",
                     ]
             else:
@@ -508,7 +508,7 @@ def read_taxonomy_file(file_path: str, yaml_rules: Optional[str] = None):
                     "parsable",
                     "-d",
                     DEFAULT_YAML_RULES,
-                    file_path,
+                    str(file_path),
                     "-s",
                 ]
             try:
