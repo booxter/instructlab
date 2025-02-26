@@ -45,7 +45,6 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 FILEEOF
 
-rm -rf yum-packaging-precompiled-kmod
 dnf install libicu podman skopeo git rpm-build make openssl elfutils-libelf-devel python3.11 python3.11-devel -y
 if [ "${KERNEL_VERSION}" == "" ]; then \
       RELEASE=$(dnf info --installed kernel-core | sort | awk -F: '/^Release/{print $2}' | tr -d '[:blank:]' | tail -n 1) \
@@ -62,41 +61,7 @@ fi \
         export BUILD_ARCH=$(arch) \
         && export TARGET_ARCH=$(echo "${BUILD_ARCH}" | sed 's/+64k//') ;\
         fi \
-    && export KVER=$(echo ${KERNEL_VERSION} | cut -d '-' -f 1) \
-    && KREL=$(echo ${KERNEL_VERSION} | cut -d '-' -f 2 | sed 's/\.el._*.*\..\+$//' | cut -d'.' -f 1) \
-    && if [ "${OS_ID}" == "rhel" ]; then \
-		KDIST="."$(echo ${KERNEL_VERSION} | cut -d '-' -f 2 | cut -d '.' -f 2-) ;\
-	else \
-		KDIST="."$(echo ${KERNEL_VERSION} | cut -d '-' -f 2 | sed 's/^.*\(\.el._*.*\)\..\+$/\1/' | cut -d'.' -f 2) ;\
-	fi \
     && DRIVER_STREAM=$(echo ${DRIVER_VERSION} | cut -d '.' -f 1) \
-    && git clone --depth 1 --single-branch -b rhel${OS_VERSION_MAJOR} https://github.com/NVIDIA/yum-packaging-precompiled-kmod \
-    && cd yum-packaging-precompiled-kmod \
-    && mkdir BUILD BUILDROOT RPMS SRPMS SOURCES SPECS \
-    && mkdir nvidia-kmod-${DRIVER_VERSION}-${BUILD_ARCH} \
-    && curl -sLOf ${BASE_URL}/${DRIVER_VERSION}/NVIDIA-Linux-${TARGET_ARCH}-${DRIVER_VERSION}.run \
-    && sh ./NVIDIA-Linux-${TARGET_ARCH}-${DRIVER_VERSION}.run --extract-only --target tmp \
-    && mv tmp/kernel-open nvidia-kmod-${DRIVER_VERSION}-${BUILD_ARCH}/kernel \
-    && tar -cJf SOURCES/nvidia-kmod-${DRIVER_VERSION}-${BUILD_ARCH}.tar.xz nvidia-kmod-${DRIVER_VERSION}-${BUILD_ARCH} \
-    && mv kmod-nvidia.spec SPECS/ \
-    && openssl req -x509 -new -nodes -utf8 -sha256 -days 36500 -batch \
-      -config "$(pwd)/../x509-configuration.ini" \
-      -outform DER -out SOURCES/public_key.der \
-      -keyout SOURCES/private_key.priv \
-    && rpmbuild \
-        --define "% _arch ${BUILD_ARCH}" \
-        --define "%_topdir $(pwd)" \
-        --define "debug_package %{nil}" \
-        --define "kernel ${KVER}" \
-        --define "kernel_release ${KREL}" \
-        --define "kernel_dist ${KDIST}" \
-        --define "driver ${DRIVER_VERSION}" \
-        --define "driver_branch ${DRIVER_STREAM}" \
-        -v -bb SPECS/kmod-nvidia.spec \
-&& cd .. \
-&& mkdir -p /lib/firmware/nvidia/${DRIVER_VERSION} \
-&& cp -rp yum-packaging-precompiled-kmod/tmp/firmware/*.bin /lib/firmware/nvidia/${DRIVER_VERSION}/ \
-    && dnf install -y yum-packaging-precompiled-kmod/RPMS/${BUILD_ARCH}/kmod-nvidia-*.rpm \
     && if [ "${TARGET_ARCH}" == "" ]; then \
         export TARGET_ARCH="$(arch)" ;\
         fi \
@@ -111,6 +76,8 @@ fi \
         CUDA_REPO_ARCH=${TARGET_ARCH} \
     && if [ "${TARGET_ARCH}" == "aarch64" ]; then CUDA_REPO_ARCH="sbsa"; fi \
     && cp -a /etc/dnf/dnf.conf{,.tmp} && mv /etc/dnf/dnf.conf{.tmp,} \
+    && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+    && dnf install -y epel-release epel-next-release \
     && dnf config-manager --best --nodocs --setopt=install_weak_deps=False --save \
     && dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel${OS_VERSION_MAJOR}/${CUDA_REPO_ARCH}/cuda-rhel${OS_VERSION_MAJOR}.repo \
     && dnf -y module enable nvidia-driver:${DRIVER_STREAM}-dkms/default \
@@ -119,6 +86,7 @@ fi \
         cloud-init \
         pciutils \
         tmux \
+        kmod-nvidia-latest-dkms-${DRIVER_VERSION} \
         nvidia-driver-cuda-${DRIVER_VERSION} \
         nvidia-driver-libs-${DRIVER_VERSION} \
         libnvidia-ml-${DRIVER_VERSION} \
@@ -163,8 +131,6 @@ fi \
         sed -i -e "/^VARIANT_ID=/ {s/^VARIANT_ID=.*/VARIANT_ID=rhel_ai/; t}" -e "\$aVARIANT_ID=rhel_ai" /usr/lib/os-release; \
         sed -i -e "/^BUILD_ID=/ {s/^BUILD_ID=.*/BUILD_ID='${IMAGE_VERSION}'/; t}" -e "\$aBUILD_ID='${IMAGE_VERSION}'" /usr/lib/os-release; \
         fi \
-    && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
-    && dnf install -y epel-release epel-next-release \
     && dnf install -y nvtop \
     && dnf clean all \
     && echo "blacklist nouveau" > /etc/modprobe.d/blacklist_nouveau.conf \
