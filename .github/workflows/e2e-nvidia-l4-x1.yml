@@ -148,6 +148,10 @@ jobs:
           git fetch origin pull/${{ github.event.number }}/head:pr-${{ github.event.number }}
           git checkout pr-${{ github.event.number }}
 
+      - name: Dump constraints to be used
+        run: |
+          cat constraints-dev.txt
+
       - name: Install ilab
         run: |
           export CUDA_HOME="/usr/local/cuda"
